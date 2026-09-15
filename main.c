@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "pss.h"
 
+#define ARQUIVO_MUSICAS "musica.txt"
+#define ARQUIVO_TEMPORARIO "novo.txt"
+
 typedef struct {
     int id;
     char titulo[50];
@@ -9,168 +12,215 @@ typedef struct {
     float duracao;
 } Musica;
 
-int idExistente(int idBuscado) {
-    Musica musicaLida;
-    FILE *file = fopen("musica.txt", "r");
-    if (file == NULL) {
-        printf("Erro na abertura do musica.txt\n");
+static int lerMusica(FILE *arquivo, Musica *musica) {
+    return fscanf(
+        arquivo,
+        "%d;%49[^;];%49[^;];%29[^;];%f\n",
+        &musica->id,
+        musica->titulo,
+        musica->artista,
+        musica->genero,
+        &musica->duracao
+    ) == 5;
+}
+
+static void gravarMusica(FILE *arquivo, const Musica *musica) {
+    fprintf(
+        arquivo,
+        "%d;%s;%s;%s;%.2f\n",
+        musica->id,
+        musica->titulo,
+        musica->artista,
+        musica->genero,
+        musica->duracao
+    );
+}
+
+static int idExistente(int idBuscado) {
+    Musica musica;
+    FILE *arquivo = fopen(ARQUIVO_MUSICAS, "r");
+
+    if (arquivo == NULL) {
         return 0;
     }
-    while (fscanf(file, "%d;%[^;];%[^;];%[^;];%f\n",
-        &musicaLida.id,
-        musicaLida.titulo,
-        musicaLida.artista,
-        musicaLida.genero,
-        &musicaLida.duracao) == 5) {
 
-        if (musicaLida.id == idBuscado) {
-            fclose(file);
+    while (lerMusica(arquivo, &musica)) {
+        if (musica.id == idBuscado) {
+            fclose(arquivo);
             return 1;
         }
     }
-    fclose(file);
+
+    fclose(arquivo);
     return 0;
 }
 
-void cadastrar() {
+static void cadastrar(void) {
     Musica novaMusica;
-    FILE *file = fopen("musica.txt", "a");
-    if (file == NULL) {
-        printf("Erro na abertura do musica.txt");
-        return;
-    }
-    printf("---Cadastro de nova musica---\n");
-    novaMusica.id = input_d("\nDigite o id que deseja atribuir a musica\n");
+
+    printf("\n--- Cadastro de nova musica ---\n");
+    novaMusica.id = input_d("Digite o ID que deseja atribuir a musica: ");
 
     if (idExistente(novaMusica.id)) {
         printf("Ja existe uma musica com esse ID.\n");
-        fclose(file);
         return;
     }
-    input_s("\nDigite o nome da musica:\n", novaMusica.titulo, 50);
-    input_s("\nDigite o artista:\n", novaMusica.artista, 50);
-    input_s("\nDigite o genero:\n", novaMusica.genero, 30);
-    novaMusica.duracao = input_f("\nDigite a duracao da musica:\n");
 
-    fprintf(file, "%d;%s;%s;%s;%.2f\n",
-    novaMusica.id, novaMusica.titulo, novaMusica.artista, novaMusica.genero, novaMusica.duracao);
-    fclose(file);
+    input_s("Digite o nome da musica: ", novaMusica.titulo, sizeof(novaMusica.titulo));
+    input_s("Digite o artista: ", novaMusica.artista, sizeof(novaMusica.artista));
+    input_s("Digite o genero: ", novaMusica.genero, sizeof(novaMusica.genero));
+    novaMusica.duracao = input_f("Digite a duracao da musica: ");
 
-}
-
-void consultar() {
-    Musica musicaLida;
-    FILE *file = fopen("musica.txt", "r");
-    if (file == NULL) {
-        printf("Erro na abertura do musica.txt");
+    FILE *arquivo = fopen(ARQUIVO_MUSICAS, "a");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo de musicas.\n");
         return;
     }
-    while (fscanf(file, "%d;%[^;];%[^;];%[^;];%f\n",
-                  &musicaLida.id,
-                  musicaLida.titulo,
-                  musicaLida.artista,
-                  musicaLida.genero,
-                  &musicaLida.duracao) == 5) {
-        printf("| Id: %d | Musica: %s | Artista: %s | Genero: %s | Duracao:%.2f |\n",
-            musicaLida.id,
-            musicaLida.titulo,
-            musicaLida.artista,
-            musicaLida.genero,
-            musicaLida.duracao);
-    }
-    fclose(file);
+
+    gravarMusica(arquivo, &novaMusica);
+    fclose(arquivo);
+
+    printf("Musica cadastrada com sucesso.\n");
 }
 
-void alterar() {
-    Musica musicaLida;
-    int buscaID;
+static void consultar(void) {
+    Musica musica;
+    FILE *arquivo = fopen(ARQUIVO_MUSICAS, "r");
+
+    if (arquivo == NULL) {
+        printf("Nenhuma musica cadastrada.\n");
+        return;
+    }
+
+    printf("\n--- Musicas cadastradas ---\n");
+
     int encontrou = 0;
-    FILE *file = fopen("musica.txt", "r");
-    if (file == NULL) {
-        printf("Erro na abertura do musica.txt\n");
-        return;
+    while (lerMusica(arquivo, &musica)) {
+        encontrou = 1;
+        printf(
+            "ID: %d | Musica: %s | Artista: %s | Genero: %s | Duracao: %.2f\n",
+            musica.id,
+            musica.titulo,
+            musica.artista,
+            musica.genero,
+            musica.duracao
+        );
     }
-    FILE *file2 = fopen("novo.txt", "w");
-    if (file2 == NULL) {
-        printf("Erro na abertura do novo.txt\n");
-        fclose(file);
-        return;
-    }
-    buscaID = input_d("\nDigite o id da musica que deseja alterar:\n");
 
-    while (fscanf(file, "%d;%[^;];%[^;];%[^;];%f\n",
-                  &musicaLida.id,
-                  musicaLida.titulo,
-                  musicaLida.artista,
-                  musicaLida.genero,
-                  &musicaLida.duracao) == 5) {
-        if (musicaLida.id == buscaID) {
-            encontrou = 1;
-            printf("Musica encontrada.");
-            input_s("\nDigite o novo nome da musica:\n", musicaLida.titulo, 50);
-            input_s("\nDigite o novo artista:\n", musicaLida.artista, 50);
-            input_s("\nDigite o novo genero:\n", musicaLida.genero, 30);
-            musicaLida.duracao = input_f("\nDigite a nova duracao da musica:\n");
-        }
-        fprintf(file2, "%d;%s;%s;%s;%.2f\n",
-                musicaLida.id, musicaLida.titulo, musicaLida.artista, musicaLida.genero, musicaLida.duracao);
+    if (!encontrou) {
+        printf("Nenhuma musica cadastrada.\n");
     }
-    fclose(file);
-    fclose(file2);
-    if (encontrou == 1) {
-        remove("musica.txt");
-        rename("novo.txt", "musica.txt");
-        printf("Musica alterada.");
-    } else {
-        remove("novo.txt");
-        printf("Musica nao encontrada.");
-    }
+
+    fclose(arquivo);
 }
 
-void excluir() {
-    Musica musicaLida;
-    int buscaID;
+static void alterar(void) {
+    Musica musica;
+    int buscaID = input_d("\nDigite o ID da musica que deseja alterar: ");
     int encontrou = 0;
-    FILE *file = fopen("musica.txt", "r");
-    FILE *file2 = fopen("novo.txt", "w");
-    if (file == NULL || file2 == NULL) {
-        printf("Erro na abertura do musica.txt");
+
+    FILE *arquivo = fopen(ARQUIVO_MUSICAS, "r");
+    if (arquivo == NULL) {
+        printf("Nenhuma musica cadastrada.\n");
         return;
     }
-    buscaID = input_d("\nDigite o id da musica que deseja excluir:\n");
 
-    while (fscanf(file, "%d;%[^;];%[^;];%[^;];%f\n",
-                  &musicaLida.id,
-                  musicaLida.titulo,
-                  musicaLida.artista,
-                  musicaLida.genero,
-                  &musicaLida.duracao) == 5) {
-        if (musicaLida.id == buscaID) {
+    FILE *temporario = fopen(ARQUIVO_TEMPORARIO, "w");
+    if (temporario == NULL) {
+        printf("Erro ao criar arquivo temporario.\n");
+        fclose(arquivo);
+        return;
+    }
+
+    while (lerMusica(arquivo, &musica)) {
+        if (musica.id == buscaID) {
             encontrou = 1;
-            printf("Musica '%s' excluida.", musicaLida.titulo);
-        }else{
-            fprintf(file2, "%d;%s;%s;%s;%.2f\n",
-                    musicaLida.id, musicaLida.titulo, musicaLida.artista, musicaLida.genero, musicaLida.duracao);
-        }
-    }
-    fclose(file);
-    fclose(file2);
+            printf("Musica encontrada: %s\n", musica.titulo);
 
-    if (encontrou == 1) {
-        remove("musica.txt");
-        rename("novo.txt", "musica.txt");
-        printf("Musica excluida.");
-    } else {
-        remove("novo.txt");
-        printf("Musica nao encontrada.");
+            input_s("Digite o novo nome da musica: ", musica.titulo, sizeof(musica.titulo));
+            input_s("Digite o novo artista: ", musica.artista, sizeof(musica.artista));
+            input_s("Digite o novo genero: ", musica.genero, sizeof(musica.genero));
+            musica.duracao = input_f("Digite a nova duracao da musica: ");
+        }
+
+        gravarMusica(temporario, &musica);
     }
+
+    fclose(arquivo);
+    fclose(temporario);
+
+    if (!encontrou) {
+        remove(ARQUIVO_TEMPORARIO);
+        printf("Musica nao encontrada.\n");
+        return;
+    }
+
+    if (remove(ARQUIVO_MUSICAS) != 0 || rename(ARQUIVO_TEMPORARIO, ARQUIVO_MUSICAS) != 0) {
+        printf("Erro ao atualizar o arquivo de musicas.\n");
+        return;
+    }
+
+    printf("Musica alterada com sucesso.\n");
 }
 
-int main() {
-    int opcao = 0;
+static void excluir(void) {
+    Musica musica;
+    int buscaID = input_d("\nDigite o ID da musica que deseja excluir: ");
+    int encontrou = 0;
+
+    FILE *arquivo = fopen(ARQUIVO_MUSICAS, "r");
+    if (arquivo == NULL) {
+        printf("Nenhuma musica cadastrada.\n");
+        return;
+    }
+
+    FILE *temporario = fopen(ARQUIVO_TEMPORARIO, "w");
+    if (temporario == NULL) {
+        printf("Erro ao criar arquivo temporario.\n");
+        fclose(arquivo);
+        return;
+    }
+
+    while (lerMusica(arquivo, &musica)) {
+        if (musica.id == buscaID) {
+            encontrou = 1;
+            printf("Musica '%s' selecionada para exclusao.\n", musica.titulo);
+            continue;
+        }
+
+        gravarMusica(temporario, &musica);
+    }
+
+    fclose(arquivo);
+    fclose(temporario);
+
+    if (!encontrou) {
+        remove(ARQUIVO_TEMPORARIO);
+        printf("Musica nao encontrada.\n");
+        return;
+    }
+
+    if (remove(ARQUIVO_MUSICAS) != 0 || rename(ARQUIVO_TEMPORARIO, ARQUIVO_MUSICAS) != 0) {
+        printf("Erro ao atualizar o arquivo de musicas.\n");
+        return;
+    }
+
+    printf("Musica excluida com sucesso.\n");
+}
+
+int main(void) {
+    int opcao;
 
     do {
-        printf("\n1 - Cadastrar\n2 - Consultar\n3 - Alterar\n4 - Excluir\n5 - Sair\n");
+        printf(
+            "\n=== Biblioteca de Musicas ===\n"
+            "1 - Cadastrar\n"
+            "2 - Consultar\n"
+            "3 - Alterar\n"
+            "4 - Excluir\n"
+            "5 - Sair\n"
+        );
+
         opcao = input_d("Escolha uma opcao: ");
 
         switch (opcao) {
@@ -187,10 +237,10 @@ int main() {
                 excluir();
                 break;
             case 5:
-                printf("Saindo\n");
+                printf("Encerrando o programa.\n");
                 break;
             default:
-                printf("Opcao invalida\n");
+                printf("Opcao invalida.\n");
         }
     } while (opcao != 5);
 
