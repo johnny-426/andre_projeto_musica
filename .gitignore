@@ -1,0 +1,24 @@
+# Build artifacts
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.exe
+*.out
+*.o
+*.obj
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Runtime data
+musica.txt
+novo.txt
+
+# OS files
+.DS_Store
+Thumbs.db
