@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 4.1)
-project(andre_projeto_musica C)
+cmake_minimum_required(VERSION 3.20)
+project(music_library_c C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
-add_executable(andre_projeto_musica main.c pss.c)
-
+add_executable(music_library main.c pss.c)
